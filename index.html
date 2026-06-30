@@ -469,8 +469,6 @@ window.addEventListener('load', () => {
     if (lastSatuan) loginSatuan.value = lastSatuan;
     document.getElementById('loginStatus').innerHTML = `🔹 Terakhir login sebagai <strong>${lastNama}</strong> (${lastSatuan}).`;
   }
-  document.getElementById('tanggal').value = new Date().toISOString().split('T')[0];
-});
 
 /* ---------- LOCAL STORAGE DATA RETENTION ---------- */
 function saveToLocalStorage() {
