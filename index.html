@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Form Monitoring MCCB & PDB</title>
+  <title>Form Metering Listrik</title>
   <link rel="icon" href="logo.png" type ="image/png"/>
   <style>
-    /* --- STYLES (Basis index (1).html & coba2.html) --- */
+    /* --- STYLES --- */
     body { font-family: 'Segoe UI', sans-serif; background-color: #0d3b66; margin: 0; padding: 0; color: #000; }
     .container { background: #fff; border-radius: 20px; padding: 20px; max-width: 850px; margin: 40px auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     h1 { text-align: center; color: #0d3b66; margin-bottom: 20px; }
@@ -158,7 +158,7 @@
         <label style="font-weight: bold; color: #0d3b66;">Arus (Ampere):</label>
         <div class="arus-row">
           <div>
-            <label interpreters for="arus_r">Arus R (A):</label>
+            <label for="arus_r">Arus R (A):</label>
             <input type="number" id="arus_r" step="0.01" style="margin-bottom:0;" />
           </div>
           <div>
@@ -691,8 +691,10 @@ foto.addEventListener("change", (ev) => {
 });
 
 async function jalankanProsesFoto(dataUrl) {
-  const tgl = document.getElementById("tanggal").value;
-  const shf = document.getElementById("shift").value;
+  const tglInput = document.getElementById("tanggal");
+  const shfInput = document.getElementById("shift");
+  const tgl = tglInput ? tglInput.value.trim() : "";
+  const shf = shfInput ? shfInput.value.trim() : "";
   if (!shf || !tgl) { alert("Pilih tanggal & Shift dahulu sebelum memproses foto."); return; }
   try {
     const now = new Date();
