@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Form Metering Listrik</title>
+  <title>Form Monitoring MCCB</title>
   <link rel="icon" href="logo.png" type ="image/png"/>
   <style>
     /* --- STYLES --- */
@@ -19,10 +19,10 @@
     .hidden { display: none !important; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; font-size: 13px; text-align: left; }
-    th { background: #0d3b66; color: white; text-align: center; }
+    th { background: #0d3b66; color: white; }
     .small { font-size: 12px; color: #444; }
     .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
-    .arus-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .arus-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px; }
     .preview { margin-top: 20px; }
     
     /* Tombol Upload */
@@ -136,46 +136,26 @@
         <option value="">-- Pilih MCCB/PDB --</option>
       </select>
 
-      <div id="blok_tegangan" style="display: none;">
-        <label style="font-weight: bold; color: #0d3b66;">Tegangan (Volt):</label>
-        <div class="arus-row">
-          <div>
-            <label for="tegangan_r">Tegangan R (V):</label>
-            <input type="number" id="tegangan_r" step="0.01" style="margin-bottom:0;" />
-          </div>
-          <div>
-            <label for="tegangan_s">Tegangan S (V):</label>
-            <input type="number" id="tegangan_s" step="0.01" style="margin-bottom:0;" />
-          </div>
-          <div>
-            <label for="tegangan_t">Tegangan T (V):</label>
-            <input type="number" id="tegangan_t" step="0.01" style="margin-bottom:0;" />
-          </div>
+      <label>Arus (Ampere):</label>
+      <div class="arus-row">
+        <div>
+          <label for="arus_r">Arus R (A):</label>
+          <input type="number" id="arus_r" step="0.01" style="margin-bottom:0;" />
         </div>
-      </div>
-
-      <div id="blok_arus" style="display: none;">
-        <label style="font-weight: bold; color: #0d3b66;">Arus (Ampere):</label>
-        <div class="arus-row">
-          <div>
-            <label for="arus_r">Arus R (A):</label>
-            <input type="number" id="arus_r" step="0.01" style="margin-bottom:0;" />
-          </div>
-          <div>
-            <label for="arus_s">Arus S (A):</label>
-            <input type="number" id="arus_s" step="0.01" style="margin-bottom:0;" />
-          </div>
-          <div>
-            <label for="arus_t">Arus T (A):</label>
-            <input type="number" id="arus_t" step="0.01" style="margin-bottom:0;" />
-          </div>
+        <div>
+          <label for="arus_s">Arus S (A):</label>
+          <input type="number" id="arus_s" step="0.01" style="margin-bottom:0;" />
+        </div>
+        <div>
+          <label for="arus_t">Arus T (A):</label>
+          <input type="number" id="arus_t" step="0.01" style="margin-bottom:0;" />
         </div>
       </div>
 
       <label>Catatan:</label>
       <textarea id="catatan" placeholder="Tambahkan catatan..."></textarea>
 
-      <button type="button" id="saveBtn" style="background: #28a745;">💾 Simpan Data ke Tabel</button>
+      <button type="button" id="saveBtn">💾 Simpan Data</button>
       <button type="button" id="submitBtn" style="background:#0056b3;">📤 Kirim ke Spreadsheet Data Metering</button>
     </form>
 
@@ -240,7 +220,7 @@
   </div>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbyJzVBQMNY6m_sOsOxBdMYXjS9S0BwSeYxoALxTqk2ps9BNNBONBldijajMN-q-dE7Krw/exec"; 
+const scriptURL = "https://script.google.com/macros/s/AKfycbzFR8pSG259Md11je_R92YTxl_zmIoHZHIHt_H1qf66bEdiqdgKagmsbY0GNbHvdxaSbA/exec"; 
 const fotoUploadURL = "https://script.google.com/macros/s/AKfycbxOsZ8NO-TSe9QI3xBnt81hOuv7r3H1VKs8QYvr9UsUOoM6NmTEFGY2VI5Zesj_kZSvZQ/exec"; 
 
 /* DOM refs */
@@ -257,6 +237,7 @@ const loginSatuan = document.getElementById('loginSatuan');
 const loginSection = document.getElementById('loginSection');
 const formSection = document.getElementById('formSection');
 
+// DOM Refs Foto & Webcam
 const btnKamera = document.getElementById('btnKamera');
 const btnGaleri = document.getElementById('btnGaleri');
 const foto = document.getElementById('foto');
@@ -267,13 +248,12 @@ const btnSnap = document.getElementById('btnSnap');
 const btnCloseCamera = document.getElementById('btnCloseCamera');
 
 let desktopStream = null;
-let isFromGallery = false; 
+let isFromGallery = false; // Pelacak sumber gambar (Kamera/Galeri)
 
 const fotoStatus = document.getElementById('fotoStatus');
 const fotoPreview = document.getElementById('fotoPreview');
 const downloadBtn = document.getElementById('downloadBtn');
 const el = { mccb: document.getElementById('mccb') };
-
 const ORDER_PDB = ["MDB Utama/PLN", "PDB Pemancar", "PDB Sarpras"];
 const ORDER_MCCB = [
   "MCCB GPO/Administrasi","MCCB Peralatan G. Ops.","MCCB Pen. Lantai 2 G. Ops.",
@@ -281,12 +261,10 @@ const ORDER_MCCB = [
   "MCCB Studio 2 dan AC Teknik","MCCB Lap. Tenis/AC R. Redaksi G. Ops.",
   "MCCB AC Lantai 1 G. Ops.","MCCB Dimer/Lighting Sto. 1","MCCB Outdoor/L. Taman"
 ];
-
-const blokTegangan = document.getElementById('blok_tegangan');
-const blokArus = document.getElementById('blok_arus');
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 
+let dataPerMCB = {};
 let lokasiTeks = {};
 let tempInputs = {};
 let fotoDriveURL = ""; 
@@ -294,6 +272,7 @@ let loginTimestamp ="";
 let currentCompressedDataURL = "";
 let savedReports = {};
 
+/* ---------- helper UI ---------- */
 function showToast(msg) {
   const toast = document.getElementById("toast");
   toast.textContent = msg;
@@ -308,6 +287,7 @@ function cekCacheLokasi() {
   const latCache = localStorage.getItem('cachedLat');
   const lngCache = localStorage.getItem('cachedLng');
   const alamatCache = localStorage.getItem('cachedAlamat');
+  
   if (latCache && lngCache) {
     cacheFallback.style.display = 'block';
     cacheText.innerHTML = `<strong>Lokasi tersimpan sebelumnya:</strong><br>${alamatCache || latCache + ', ' + lngCache}`;
@@ -326,26 +306,49 @@ function getLocation() {
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
       lokasiTeks = { lat, lng };
+      
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
         const data = await res.json();
         lokasiTeks.alamat = data.display_name;
         lokasiEl.textContent = `📍 ${data.display_name} (${lat}, ${lng})`;
+        
         localStorage.setItem('cachedLat', lat);
         localStorage.setItem('cachedLng', lng);
         localStorage.setItem('cachedAlamat', data.display_name || "");
       } catch {
         lokasiEl.textContent = `📍 (${lat}, ${lng})`;
       }
+      
+      btnRetryLokasi.style.display = 'none';
+      cacheFallback.style.display = 'none';
     }, err => {
       btnRetryLokasi.style.display = 'inline-block';
       cekCacheLokasi(); 
+      
+      if(err.code === 1) { 
+        lokasiEl.textContent = "⚠️ Izin lokasi ditolak browser.";
+        alert("LOKASI DITOLAK ATAU DIBLOKIR SISTEM!\n\n1. Jika dibuka dari WA: Buka lewat Chrome titik tiga pojok kanan atas.\n2. Jika sudah di Chrome: Klik gembok 🔒 di alamat web, pilih Izin, nyalakan Lokasi.");
+      } else if(err.code === 2) { 
+        lokasiEl.textContent = "⚠️ GPS mati / Sinyal lemah.";
+      } else if(err.code === 3) { 
+        lokasiEl.textContent = "⚠️ Waktu habis saat mencari lokasi.";
+      } else {
+        lokasiEl.textContent = "⚠️ Gagal mengambil lokasi.";
+      }
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  } else {
+    lokasiEl.textContent = "📍 Browser HP tidak mendukung fitur lokasi.";
   }
 }
+
 getLocation();
 
-btnRetryLokasi.addEventListener('click', () => { lokasiTeks = {}; getLocation(); });
+btnRetryLokasi.addEventListener('click', () => {
+  lokasiTeks = {}; 
+  getLocation();
+});
+
 btnPakaiCache.addEventListener('click', () => {
   lokasiTeks = {
     lat: localStorage.getItem('cachedLat'),
@@ -353,95 +356,54 @@ btnPakaiCache.addEventListener('click', () => {
     alamat: localStorage.getItem('cachedAlamat')
   };
   lokasiEl.textContent = `📍 ${lokasiTeks.alamat || ''} (${lokasiTeks.lat}, ${lokasiTeks.lng}) [Lokasi Tersimpan]`;
+  
   cacheFallback.style.display = 'none';
-  showToast("✅ Menggunakan lokasi cadangan.");
+  btnRetryLokasi.style.display = 'none';
+  showToast("✅ Menggunakan lokasi yang tersimpan.");
 });
 
-/* ---------- populate MCCB / PDB Options ---------- */
-function isiDropdownMccbDinamis(unit) {
-  el.mccb.innerHTML = '<option value="">-- Pilih MCCB/PDB --</option>';
-  
-  if (unit === "Stasiun Pucanggading") {
-    const g1 = document.createElement('optgroup');
-    g1.label = "— Kategori PDB —";
-    ORDER_PDB.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p; o.textContent = p; g1.appendChild(o);
-    });
-    el.mccb.appendChild(g1);
-
-    const g2 = document.createElement('optgroup');
-    g2.label = "— Kategori MCCB —";
-    ORDER_MCCB.forEach(m => {
-      const o = document.createElement('option');
-      o.value = m; o.textContent = m; g2.appendChild(o);
-    });
-    el.mccb.appendChild(g2);
-  } else {
-    ORDER_PDB.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p; o.textContent = p; el.mccb.appendChild(o);
-    });
-  }
+/* ---------- populate MCCB options ---------- */
+function isiMCCB(unit){
+  const data = unit === "Stasiun Pucanggading"
+    ? ["MCCB GPO/Administrasi","MCCB Peralatan G. Ops.","MCCB Pen. Lantai 2 G. Ops.","MCCB AC Lantai 2 G. Ops.","MCCB AC Studio Utama","MCCB AC R. Berita / Siaran Lantai 2, G.Ops.","MCCB Studio 2 dan AC Teknik","MCCB Lap. Tenis/AC R. Redaksi G. Ops.","MCCB AC Lantai 1 G. Ops.","MCCB Dimer/Lighting Sto. 1","MCCB Outdoor/L. Taman"]
+    : ["MDB Utama/PLN","PDB Pemancar","PDB Sarpras"];
+  el.mccb.innerHTML ='<option value="">-- Pilih MCCB/PDB --</option>' + data.map(x => `<option value="${x}">${x}</option>`).join('');
 }
-
 el.mccb.addEventListener("change", () => {
   const prev = el.mccb.dataset.prev;
   if (prev) {
     tempInputs[prev] = {
-      disabled_v_r: document.getElementById('tegangan_r').value,
-      disabled_v_s: document.getElementById('tegangan_s').value,
-      disabled_v_t: document.getElementById('tegangan_t').value,
       r: document.getElementById('arus_r').value,
       s: document.getElementById('arus_s').value,
       t: document.getElementById('arus_t').value,
       catatan: document.getElementById('catatan').value
     };
   }
-
   const jenisBaru = el.mccb.value;
-  document.getElementById('tegangan_r').value = "";
-  document.getElementById('tegangan_s').value = "";
-  document.getElementById('tegangan_t').value = "";
   document.getElementById('arus_r').value = "";
   document.getElementById('arus_s').value = "";
   document.getElementById('arus_t').value = "";
   document.getElementById('catatan').value = "";
-
-  if (jenisBaru !== "") {
-    blokArus.style.display = "block";
-    if (ORDER_PDB.includes(jenisBaru)) {
-      blokTegangan.style.display = "block";
-    } else {
-      blokTegangan.style.display = "none";
-    }
-  } else {
-    blokTegangan.style.display = "none";
-    blokArus.style.display = "none";
-  }
-
   if (tempInputs[jenisBaru]) {
     const d = tempInputs[jenisBaru];
-    document.getElementById('tegangan_r').value = d.disabled_v_r || "";
-    document.getElementById('tegangan_s').value = d.disabled_v_s || "";
-    document.getElementById('tegangan_t').value = d.disabled_v_t || "";
-    document.getElementById('arus_r').value = d.r || "";
-    document.getElementById('arus_s').value = d.s || "";
-    document.getElementById('arus_t').value = d.t || "";
-    document.getElementById('catatan').value = d.catatan || "";
+    document.getElementById('arus_r').value = d.r;
+    document.getElementById('arus_s').value = d.s;
+    document.getElementById('arus_t').value = d.t;
+    document.getElementById('catatan').value = d.catatan;
   }
   el.mccb.dataset.prev = jenisBaru;
 });
 
 /* ---------- AUTO UPDATE TANGGAL & SHIFT DI TABEL ---------- */
 document.getElementById('shift').addEventListener('change', (e) => {
-  Object.keys(savedReports).forEach(k => savedReports[k].shift = e.target.value);
-  saveToLocalStorage();
+  const newShift = e.target.value;
+  Object.keys(savedReports).forEach(k => savedReports[k].shift = newShift);
   if (Object.keys(savedReports).length > 0) renderOutput(); 
 });
+
 document.getElementById('tanggal').addEventListener('change', (e) => {
-  Object.keys(savedReports).forEach(k => savedReports[k].tanggal = e.target.value);
-  saveToLocalStorage();
+  const newTanggal = e.target.value;
+  Object.keys(savedReports).forEach(k => savedReports[k].tanggal = newTanggal);
   if (Object.keys(savedReports).length > 0) renderOutput(); 
 });
 
@@ -457,53 +419,23 @@ loginBtn.addEventListener('click', () => {
   document.getElementById('satuan_kerja').value = satuan;
   loginSection.classList.add('hidden');
   formSection.classList.remove('hidden');
-  isiDropdownMccbDinamis(satuan);
-  loadFromLocalStorage(); 
+  isiMCCB(satuan);
 });
 
 window.addEventListener('load', () => {
   const lastNama = localStorage.getItem('lastNamaPetugas');
   const lastSatuan = localStorage.getItem('lastSatuanKerja');
+  
   if (lastNama) {
     loginNama.value = lastNama;
-    if (lastSatuan) loginSatuan.value = lastSatuan;
-    document.getElementById('loginStatus').innerHTML = `🔹 Terakhir login sebagai <strong>${lastNama}</strong> (${lastSatuan}).`;
+    if (lastSatuan) {
+      loginSatuan.value = lastSatuan;
+    }
+    document.getElementById('loginStatus').innerHTML = `🔹 Terakhir login sebagai <strong>${lastNama}</strong>${ lastSatuan ? ` (${lastSatuan})` : "" }.`;
   }
-
 });
 
-/* ---------- LOCAL STORAGE DATA RETENTION ---------- */
-function saveToLocalStorage() {
-  const dataBackup = {
-    savedReports: savedReports,
-    tempInputs: tempInputs,
-    fotoDriveURL: fotoDriveURL,
-    currentCompressedDataURL: currentCompressedDataURL
-  };
-  localStorage.setItem('metering_local_backup', JSON.stringify(dataBackup));
-}
-
-function loadFromLocalStorage() {
-  const cacheStr = localStorage.getItem('metering_local_backup');
-  if (!cacheStr) return;
-  try {
-    const backup = JSON.parse(cacheStr);
-    savedReports = backup.savedReports || {};
-    tempInputs = backup.tempInputs || {};
-    fotoDriveURL = backup.fotoDriveURL || "";
-    
-    if (backup.currentCompressedDataURL) {
-      currentCompressedDataURL = backup.currentCompressedDataURL;
-      fotoPreview.src = backup.currentCompressedDataURL;
-      fotoPreview.classList.remove("hidden");
-      downloadBtn.classList.remove("hidden");
-      fotoStatus.textContent = "Base64 Pulih";
-    }
-    renderOutput();
-  } catch(e) { console.error("Gagal sinkronisasi data local storage", e); }
-}
-
-/* ---------- FORMAT FOTO & WATERMARKING GEOTAG ---------- */
+/* ---------- Format Waktu Default Helper ---------- */
 function formatTimeCustom(dateObj) {
   const dd = String(dateObj.getDate()).padStart(2, '0');
   const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -515,24 +447,26 @@ function formatTimeCustom(dateObj) {
 }
 
 function formatDateFromInput(tglStr, timeStr) {
-  if(!tglStr) return timeStr;
   const [y, m, d] = tglStr.split('-');
   return `${d}/${m}/${y} ${timeStr}`;
 }
 
 function getCurrentShift(now) {
   const h = now.getHours();
-  if (h >= 7 && h < 15) return "Shift 1"; 
-  if (h >= 15 && h < 23) return "Shift 2"; 
+  const m = now.getMinutes();
+  if (h < 8 || (h === 8 && m === 0)) return "Shift 1"; 
+  if (h < 16 || (h === 16 && m === 0)) return "Shift 2"; 
   return "Shift 3"; 
 }
 
+/* ---------- custom Modal Timestamp Promise Terpadu ---------- */
 function askWatermarkOptions(isMismatch, tglInput, shift, fromGallery) {
   return new Promise(resolve => {
     const modal = document.getElementById('timestampModal');
     const desc = document.getElementById('modalDesc');
     const matchOpts = document.getElementById('matchOptions');
     const mismatchOpts = document.getElementById('mismatchOptions');
+    const btnSkipWm = document.getElementById('btnSkipWm');
     
     const now = new Date();
     const todayStrFull = formatTimeCustom(now);
@@ -542,20 +476,9 @@ function askWatermarkOptions(isMismatch, tglInput, shift, fromGallery) {
     if(shift === "Shift 3") shiftTime = "23:59:00";
     const shiftStrFull = formatDateFromInput(tglInput, shiftTime);
 
-    const offset = now.getTimezoneOffset();
-    const localNow = new Date(now.getTime() - (offset * 60 * 1000));
-    const localTodayStr = localNow.toISOString().split('T')[0];
+    btnSkipWm.style.display = fromGallery ? 'block' : 'none';
 
-    const realMismatch = (tglInput !== localTodayStr || shift !== getCurrentShift(now));
-
-    if (!fromGallery && !realMismatch) {
-      resolve({ skip: false, timestamp: todayStrFull });
-      return;
-    }
-
-    document.getElementById('btnSkipWm').style.display = fromGallery ? 'block' : 'none';
-
-    if (realMismatch) {
+    if (isMismatch) {
       desc.textContent = "Tanggal atau Shift tidak sesuai dengan jadwal saat ini. Pilih opsi watermark:";
       matchOpts.style.display = 'none';
       mismatchOpts.style.display = 'block';
@@ -570,20 +493,67 @@ function askWatermarkOptions(isMismatch, tglInput, shift, fromGallery) {
 
     modal.style.display = 'flex';
 
-    document.getElementById('btnSkipWm').onclick = () => { modal.style.display = 'none'; resolve({ skip: true, timestamp: "" }); };
-    document.getElementById('btnTambahkanWm').onclick = () => { modal.style.display = 'none'; resolve({ skip: false, timestamp: todayStrFull }); };
-    document.getElementById('btnTsToday').onclick = () => { modal.style.display = 'none'; resolve({ skip: false, timestamp: todayStrFull }); };
-    document.getElementById('btnTsShift').onclick = () => { modal.style.display = 'none'; resolve({ skip: false, timestamp: shiftStrFull }); };
+    document.getElementById('btnSkipWm').onclick = () => {
+      modal.style.display = 'none';
+      resolve({ skip: true, timestamp: "" });
+    };
+
+    document.getElementById('btnTambahkanWm').onclick = () => {
+      modal.style.display = 'none';
+      resolve({ skip: false, timestamp: todayStrFull });
+    };
+
+    document.getElementById('btnTsToday').onclick = () => {
+      modal.style.display = 'none';
+      resolve({ skip: false, timestamp: todayStrFull });
+    };
+    
+    document.getElementById('btnTsShift').onclick = () => {
+      modal.style.display = 'none';
+      resolve({ skip: false, timestamp: shiftStrFull });
+    };
+    
     document.getElementById('btnTsManual').onclick = () => {
       let manualVal = document.getElementById('manualTime').value;
-      if(!manualVal) { alert("Atur jam terlebih dahulu!"); return; }
+      if(!manualVal) {
+        alert("Atur jam di kolom sebelahnya terlebih dahulu!");
+        return;
+      }
       modal.style.display = 'none';
       if(manualVal.split(':').length === 2) manualVal += ":00";
-      resolve({ skip: false, timestamp: formatDateFromInput(tglInput, manualVal) });
+      const manualStrFull = formatDateFromInput(tglInput, manualVal);
+      resolve({ skip: false, timestamp: manualStrFull });
     };
   });
 }
 
+/* ---------- helper: read file -> dataURL ---------- */
+function readFileAsDataURL(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = e => rej(e);
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- helper: draw rounded rectangle ---------- */
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ---------- compress & watermark ---------- */
 function compressAndWatermark(dataURL, customTimestamp, skipWatermark) {
   return new Promise(res => {
     const img = new Image();
@@ -595,55 +565,63 @@ function compressAndWatermark(dataURL, customTimestamp, skipWatermark) {
       ctx.clearRect(0,0,w,h);
       ctx.drawImage(img,0,0,w,h);
 
-      if (skipWatermark) { res(canvas.toDataURL('image/jpeg', 0.75)); return; }
+      if (skipWatermark) {
+        res(canvas.toDataURL('image/jpeg', 0.75));
+        return; 
+      }
 
       const titleSize = Math.max(18, Math.floor(h/35)); 
       const textSize = Math.max(14, Math.floor(h/45));  
-      const padding = 20; const margin = 20;  
+      const padding = 20; 
+      const margin = 20;  
       const cardWidth = w - (margin * 2);
-      
-      const iconSize = textSize * 1.5;
+      const iconSize = textSize * 1.5; 
       const iconMarginRight = 10;
       const detailAvailableWidth = cardWidth - (padding * 2) - iconSize - iconMarginRight;
 
       const petugas = document.getElementById('petugas').value || '';
       const satuan = document.getElementById('satuan_kerja').value || '';
+      const titleText = `${petugas} — ${satuan}`;
       
-      ctx.font = `${textSize}px Arial, sans-serif`;
-      let addressLines = lokasiTeks.alamat ? wrapTextToArray(ctx, lokasiTeks.alamat, detailAvailableWidth) : ["Mencari jalan lokasi satelit..."];
-      let coordText = lokasiTeks.lat ? `Lat ${lokasiTeks.lat}° Long ${lokasiTeks.lng}°` : "Lokasi tidak tersedia";
+      ctx.font = `${textSize}px Roboto, "Segoe UI", Arial, sans-serif`;
+      let addressLines = [];
+      if (lokasiTeks.alamat) {
+        addressLines = wrapTextToArray(ctx, lokasiTeks.alamat, detailAvailableWidth);
+      }
       
+      let coordText = "Lokasi tidak tersedia";
+      if (lokasiTeks.lat && lokasiTeks.lng) {
+        coordText = `Lat ${lokasiTeks.lat}° Long ${lokasiTeks.lng}°`;
+      }
+      
+      const timeText = `${customTimestamp} GMT +07:00`;
       const titleLineHeight = titleSize * 1.4;
       const textLineHeight = textSize * 1.4;
       const totalTextLines = addressLines.length + 2; 
-      
-      const cardHeight = padding + titleLineHeight + 12 + (totalTextLines * textLineHeight) + padding;
+      const cardHeight = padding + titleLineHeight + 10 + (totalTextLines * textLineHeight) + padding;
       const cardY = h - cardHeight - margin;
+      const cardX = margin;
 
       const pinImg = new Image();
       pinImg.onload = () => {
         ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-        drawRoundRect(ctx, margin, cardY, cardWidth, cardHeight, 15); 
-        
-        ctx.textBaseline = 'top'; ctx.fillStyle = "#ffffff";
-        ctx.font = `bold ${titleSize}px Arial, sans-serif`;
-        ctx.fillText(`${petugas} — ${satuan}`, margin + padding, cardY + padding);
-        
-        let currentY = cardY + padding + titleLineHeight + 12; 
+        drawRoundRect(ctx, cardX, cardY, cardWidth, cardHeight, 15); 
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${titleSize}px Roboto, "Segoe UI", Arial, sans-serif`;
+        ctx.fillText(titleText, cardX + padding, cardY + padding);
+        let currentY = cardY + padding + titleLineHeight + 10; 
         const iconY = currentY - ((iconSize - textSize) / 2);
-        ctx.drawImage(pinImg, margin + padding, iconY, iconSize, iconSize);
-        
-        ctx.font = `${textSize}px Arial, sans-serif`;
-        const startTextX = margin + padding + iconSize + iconMarginRight;
-        
+        ctx.drawImage(pinImg, cardX + padding, iconY, iconSize, iconSize);
+        ctx.font = `${textSize}px Roboto, "Segoe UI", Arial, sans-serif`;
+        const detailStartX = cardX + padding + iconSize + iconMarginRight;
         addressLines.forEach(ln => { 
-          ctx.fillText(ln, startTextX, currentY); 
+          ctx.fillText(ln, detailStartX, currentY); 
           currentY += textLineHeight; 
         });
-        ctx.fillText(coordText, startTextX, currentY); 
+        ctx.fillText(coordText, detailStartX, currentY);
         currentY += textLineHeight;
-        ctx.fillText(`${customTimestamp} GMT +07:00`, startTextX, currentY);
-        
+        ctx.fillText(timeText, detailStartX, currentY);
         res(canvas.toDataURL('image/jpeg',0.75));
       };
       pinImg.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff5252'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E";
@@ -653,114 +631,193 @@ function compressAndWatermark(dataURL, customTimestamp, skipWatermark) {
 }
 
 function wrapTextToArray(ctx, text, maxWidth) {
-  if(!text) return []; const words = text.split(' '), lines = []; let cur = "";
+  if(!text) return [];
+  const words = text.split(' '), lines = [];
+  let cur = "";
   for(const w of words){
     const test = cur ? cur + " " + w : w;
-    if(ctx.measureText(test).width > maxWidth && cur){ lines.push(cur); cur = w; } else { cur = test; }
+    if(ctx.measureText(test).width > maxWidth && cur){ 
+      lines.push(cur); 
+      cur = w; 
+    } else {
+      cur = test;
+    }
   }
-  if(cur) lines.push(cur); return lines; 
-}
-function drawRoundRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath(); ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius); ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height); ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius); ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath(); ctx.fill();
+  if(cur) lines.push(cur);
+  return lines; 
 }
 
-btnGaleri.addEventListener('click', () => { isFromGallery = true; foto.removeAttribute('capture'); foto.click(); });
+
+/* ---------- FOTO: TOMBOL KAMERA & GALERI ---------- */
+function cekValidasiAwal() {
+  const tanggal = document.getElementById("tanggal").value;
+  const shift = document.getElementById("shift").value;
+  if (!shift || !tanggal) {
+    alert("Pilih tanggal & Shift dahulu sebelum memilih foto.");
+    return false;
+  }
+  return true;
+}
+
 btnKamera.addEventListener('click', async () => {
+  if (!cekValidasiAwal()) return;
   isFromGallery = false;
-  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) { foto.setAttribute('capture', 'environment'); foto.click(); } 
-  else {
-    try { desktopStream = await navigator.mediaDevices.getUserMedia({ video: true }); videoStream.srcObject = desktopStream; webcamModal.style.display = 'flex'; } 
-    catch { foto.removeAttribute('capture'); foto.click(); }
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    foto.setAttribute('capture', 'environment');
+    foto.click();
+  } else {
+    try {
+      desktopStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoStream.srcObject = desktopStream;
+      webcamModal.style.display = 'flex';
+    } catch (err) {
+      alert("Kamera laptop tidak ditemukan atau izin diblokir.");
+      foto.removeAttribute('capture');
+      foto.click(); 
+    }
   }
 });
-btnCloseCamera.addEventListener('click', () => { webcamModal.style.display = 'none'; if(desktopStream) desktopStream.getTracks().forEach(t=>t.stop()); });
+
+btnGaleri.addEventListener('click', () => {
+  if (!cekValidasiAwal()) return;
+  isFromGallery = true;
+  foto.removeAttribute('capture'); 
+  foto.click(); 
+});
+
+btnCloseCamera.addEventListener('click', () => {
+  webcamModal.style.display = 'none';
+  if (desktopStream) desktopStream.getTracks().forEach(t => t.stop());
+});
+
 btnSnap.addEventListener('click', () => {
-  cameraCanvas.width = videoStream.videoWidth; cameraCanvas.height = videoStream.videoHeight;
+  cameraCanvas.width = videoStream.videoWidth;
+  cameraCanvas.height = videoStream.videoHeight;
   cameraCanvas.getContext('2d').drawImage(videoStream, 0, 0);
-  webcamModal.style.display = 'none'; if(desktopStream) desktopStream.getTracks().forEach(t=>t.stop());
-  jalankanProsesFoto(cameraCanvas.toDataURL('image/jpeg')); 
+  const dataUrl = cameraCanvas.toDataURL('image/jpeg');
+  webcamModal.style.display = 'none';
+  if (desktopStream) desktopStream.getTracks().forEach(t => t.stop());
+  jalankanProsesFoto(dataUrl); 
 });
-foto.addEventListener("change", (ev) => {
-  if(ev.target.files?.[0]) {
-    const r = new FileReader(); r.onload = () => jalankanProsesFoto(r.result); r.readAsDataURL(ev.target.files[0]);
+
+foto.addEventListener("change", async (ev) => {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  try {
+    const dataUrl = await readFileAsDataURL(file);
+    await jalankanProsesFoto(dataUrl);
+  } catch (err) {
+    alert("Gagal membaca file gambar.");
   }
 });
+
 
 async function jalankanProsesFoto(dataUrl) {
-  const tglInput = document.getElementById("tanggal");
-  const shfInput = document.getElementById("shift");
-  const tgl = tglInput ? tglInput.value.trim() : "";
-  const shf = shfInput ? shfInput.value.trim() : "";
-  if (!shf || !tgl) { alert("Pilih tanggal & Shift dahulu sebelum memproses foto."); return; }
+  const tanggal = document.getElementById("tanggal").value;
+  const shift = document.getElementById("shift").value;
   try {
     const now = new Date();
-    const isMismatch = (tgl !== now.toISOString().split('T')[0] || shf !== getCurrentShift(now));
-    let choice = await askWatermarkOptions(isMismatch, tgl, shf, isFromGallery);
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    const currentShift = getCurrentShift(now);
+    const isMismatch = (tanggal !== todayStr || shift !== currentShift);
+    let finalTimestamp = "";
+    let skipWM = false;
     
-    currentCompressedDataURL = await compressAndWatermark(dataUrl, choice.timestamp, choice.skip);
+    // Perbaikan: Jika input tanggal & shift sudah benar real-time, dialog box tidak muncul
+    if (isMismatch) {
+      const userChoice = await askWatermarkOptions(isMismatch, tanggal, shift, isFromGallery);
+      finalTimestamp = userChoice.timestamp;
+      skipWM = userChoice.skip;
+    } else {
+      finalTimestamp = formatTimeCustom(now);
+      skipWM = false;
+    }
+    
+    currentCompressedDataURL = await compressAndWatermark(dataUrl, finalTimestamp, skipWM);
     fotoPreview.src = currentCompressedDataURL;
-    fotoPreview.classList.remove("hidden"); downloadBtn.classList.remove("hidden");
+    fotoPreview.classList.remove("hidden");
+    downloadBtn.classList.remove("hidden");
     fotoStatus.textContent = "⏳ Mengunggah foto ke Drive...";
-    
+    const base64 = currentCompressedDataURL.split(",")[1];
     const body = new URLSearchParams();
-    body.append("filedata", currentCompressedDataURL.split(",")[1]);
+    body.append("filedata", base64);
     body.append("mimetype", "image/jpeg");
+    body.append("loginTimestamp", loginTimestamp);
     body.append("petugas", document.getElementById("petugas").value);
     body.append("satuan_kerja", document.getElementById("satuan_kerja").value);
-
+    body.append("shift", shift);
+    body.append("tanggal", tanggal);
     const res = await fetch(fotoUploadURL, { method: "POST", body: body });
-    const result = await res.json();
+    const text = await res.text();
+    const result = JSON.parse(text);
     if (result.status === "ok" && result.url) {
       fotoDriveURL = result.url;
       fotoStatus.textContent = "✅ Foto tersimpan di Drive.";
-      showToast("📸 Unggah foto sukses.");
-      saveToLocalStorage();
+      showToast("📸 Foto tersimpan di Drive.");
+      for (const k in savedReports) {
+        const it = savedReports[k];
+        if (it.satuan_kerja === document.getElementById('satuan_kerja').value && it.tanggal === tanggal && it.shift === shift) {
+          it.foto = fotoDriveURL;
+        }
+      }
       renderOutput();
+    } else {
+      throw new Error(result.message || "Upload server menolak");
     }
-  } catch {
+  } catch (err) {
+    console.error(err);
+    alert("❌ Gagal memproses/upload foto: " + err.message);
     fotoStatus.textContent = "❌ Upload gagal.";
+    fotoPreview.classList.add("hidden");
+    downloadBtn.classList.add("hidden");
   }
 }
 
 downloadBtn.addEventListener('click', () => {
-  const a = document.createElement('a'); a.href = currentCompressedDataURL;
-  a.download = `Geotag_${document.getElementById('mccb').value || 'Panel'}_${Date.now()}.jpg`; a.click();
+  if (!currentCompressedDataURL) return;
+  const a = document.createElement('a');
+  a.href = currentCompressedDataURL;
+  a.download = `Foto_MCCB_${document.getElementById('mccb').value || 'File'}_${Date.now()}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 
-/* ---------- PERSISTENCE LOKAL & SIMPAN KE TABEL PREVIEW ---------- */
+/* ---------- SAVE per MCCB  ---------- */
 document.getElementById('saveBtn').addEventListener('click', () => {
   const satuan = document.getElementById('satuan_kerja').value;
   const petugas = document.getElementById('petugas').value;
   const tanggal = document.getElementById('tanggal').value;
   const shift = document.getElementById('shift').value;
   const jenis = document.getElementById('mccb').value;
-  
-  const teg_r = document.getElementById('tegangan_r').value;
-  const teg_s = document.getElementById('tegangan_s').value;
-  const teg_t = document.getElementById('tegangan_t').value;
   const r = document.getElementById('arus_r').value;
   const s = document.getElementById('arus_s').value;
   const t = document.getElementById('arus_t').value;
   const catatan = document.getElementById('catatan').value;
 
-  if (!tanggal || !shift || !jenis) { alert("Lengkapi pilihan Tanggal, Shift, dan Komponen Panel!"); return; }
+  if (!satuan || !petugas || !tanggal || !shift || !jenis) {
+    alert("Lengkapi semua field terlebih dahulu!");
+    return;
+  }
 
-  savedReports[jenis] = {
-    tanggal, shift, jenis,
-    tegangan_r: teg_r || "-", tegangan_s: teg_s || "-", tegangan_t: teg_t || "-",
-    arus_r: r || "-", arus_s: s || "-", arus_t: t || "-", catatan: catatan || "-"
+  // Kunci data sekarang pakai jenis saja agar menimpa jika MCCB sama diinput ulang
+  const key = jenis; 
+  savedReports[key] = {
+    satuan_kerja: satuan, petugas: petugas, tanggal: tanggal, shift: shift,
+    jenis: jenis, arus_r: r, arus_s: s, arus_t: t, catatan: catatan,
+    foto: fotoDriveURL || "", savedAt: new Date().toLocaleTimeString()
   };
 
-  saveToLocalStorage(); 
+  dataPerMCB[jenis] = { r, s, t, catatan };
+  document.getElementById('previewTitle').textContent = "📋 Data Tersimpan (Belum Dikirim)"; 
   renderOutput();
-  showToast("💾 Baris data berhasil ditambahkan ke tabel preview!");
+  showToast("💾 Data tersimpan / diperbarui.");
 });
 
-/* ---------- RENDER OUTPUT TABEL DENGAN MERGE HEADER RST & CATATAN ---------- */
 function renderOutput() {
   if (Object.keys(savedReports).length === 0) {
     output.innerHTML = "<em>Belum ada data tersimpan.</em>";
@@ -784,52 +841,30 @@ function renderOutput() {
       </table>
     </div>`;
 
-  html += `<div style='overflow-x: auto;'>
-    <table>
-      <tr>
-        <th rowspan="2">Tanggal</th>
-        <th rowspan="2">Shift</th>
-        <th rowspan="2">Jenis</th>
-        <th colspan="3">Tegangan (Volt)</th>
-        <th colspan="3">Arus (Ampere)</th>
-        <th rowspan="2">Catatan</th>
-        <th rowspan="2">Foto</th>
-      </tr>
-      <tr>
-        <th>R</th><th>S</th><th>T</th>
-        <th>R</th><th>S</th><th>T</th>
-      </tr>`;
-
+  html += "<div style='overflow-x: auto;'><table><tr><th>Tanggal</th><th>Shift</th><th>Jenis</th><th>R</th><th>S</th><th>T</th><th>Foto</th></tr>";
   sorted.forEach((r, index) => {
-    html += `<tr>
-      <td>${r.tanggal}</td>
-      <td>${r.shift}</td>
-      <td style="font-weight:bold; color:#0d3b66;">${r.jenis}</td>
-      <td style="text-align:center;">${r.tegangan_r}</td>
-      <td style="text-align:center;">${r.tegangan_s}</td>
-      <td style="text-align:center;">${r.tegangan_t}</td>
-      <td style="text-align:center;">${r.arus_r}</td>
-      <td style="text-align:center;">${r.arus_s}</td>
-      <td style="text-align:center;">${r.arus_t}</td>
-      <td>${r.catatan}</td>`;
-    
+    html += `<tr><td>${r.tanggal}</td><td>${r.shift}</td><td>${r.jenis}</td><td>${r.arus_r}</td><td>${r.arus_s}</td><td>${r.arus_t}</td>`;
     if (index === 0) {
-      const fotoCell = fotoDriveURL ? `<a href="${fotoDriveURL}" target="_blank" style="color: #0056b3; font-weight: bold; text-decoration: none;">lihat</a>` : "—";
+      const fotoCell = r.foto ? `<a href="${r.foto}" target="_blank" style="color: #0056b3; font-weight: bold; text-decoration: none;">lihat</a>` : "";
       html += `<td rowspan="${sorted.length}" style="text-align: center; vertical-align: middle;">${fotoCell}</td>`;
     }
     html += `</tr>`;
   });
-
   html += "</table></div>";
   output.innerHTML = html;
 }
 
-/* ---------- SUBMIT ALL DATA TO APPS SCRIPT DENGAN JSON HORIZONTAL ---------- */  
+/* ---------- SUBMIT ALL to metering-data (VERSI FINAL V2 - 1 BARIS) ---------- */  
 document.getElementById('submitBtn').addEventListener('click', async () => {
-  if (Object.keys(savedReports).length === 0) { alert("Tabel kosong! Simpan minimal satu panel via tombol Hijau."); return; }
+  if (Object.keys(savedReports).length === 0) { 
+    alert("Belum ada data yang disimpan! Simpan minimal satu panel dulu."); 
+    return; 
+  }
 
   const btnKirim = document.getElementById('submitBtn');
-  btnKirim.disabled = true; btnKirim.style.background = "#6c757d"; btnKirim.textContent = "⏳ Sedang memproses... JANGAN DITUTUP";
+  btnKirim.disabled = true; 
+  btnKirim.style.background = "#6c757d"; 
+  btnKirim.textContent = "⏳ Sedang memproses... JANGAN DITUTUP";
   status.textContent = "⏳ Mengirim data ke server...";
 
   const flatData = {
@@ -838,67 +873,78 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     petugas: document.getElementById('petugas').value,
     satuan_kerja: document.getElementById('satuan_kerja').value,
     link_foto: fotoDriveURL || "", 
-    catatan: "",
-    mdb_v_r: "", mdb_v_s: "", mdb_v_t: "", mdb_r: "", mdb_s: "", mdb_t: "",
-    pem_v_r: "", pem_v_s: "", pem_v_t: "", pem_r: "", pem_s: "", pem_t: "",
-    sar_v_r: "", sar_v_s: "", sar_v_t: "", sar_r: "", sar_s: "", sar_t: ""
+    catatan: ""
   };
 
   let listCatatan = [];
-
   Object.values(savedReports).forEach(row => {
     const namaPanel = row.jenis.toLowerCase();
-    const v_r = row.tegangan_r || ""; const v_s = row.tegangan_s || ""; const v_t = row.tegangan_t || "";
-    const i_r = row.arus_r || ""; const i_s = row.arus_s || ""; const i_t = row.arus_t || "";
-
-    if (namaPanel.includes("mdb") || namaPanel.includes("pln")) {
-      if(v_r!=="-") flatData.mdb_v_r=v_r; if(v_s!=="-") flatData.mdb_v_s=v_s; if(v_t!=="-") flatData.mdb_v_t=v_t;
-      if(i_r!=="-") flatData.mdb_r=i_r; if(i_s!=="-") flatData.mdb_s=i_s; if(i_t!=="-") flatData.mdb_t=i_t;
+    if (namaPanel.includes("mdb")) {
+      flatData.mdb_r = row.arus_r; flatData.mdb_s = row.arus_s; flatData.mdb_t = row.arus_t;
     } else if (namaPanel.includes("pemancar")) {
-      if(v_r!=="-") flatData.pem_v_r=v_r; if(v_s!=="-") flatData.pem_v_s=v_s; if(v_t!=="-") flatData.pem_v_t=v_t;
-      if(i_r!=="-") flatData.pem_r=i_r; if(i_s!=="-") flatData.pem_s=i_s; if(i_t!=="-") flatData.pem_t=i_t;
+      flatData.pem_r = row.arus_r; flatData.pem_s = row.arus_s; flatData.pem_t = row.arus_t;
     } else if (namaPanel.includes("sarpras")) {
-      if(v_r!=="-") flatData.sar_v_r=v_r; if(v_s!=="-") flatData.sar_v_s=v_s; if(v_t!=="-") flatData.sar_v_t=v_t;
-      if(i_r!=="-") flatData.sar_r=i_r; if(i_s!=="-") flatData.sar_s=i_s; if(i_t!=="-") flatData.sar_t=i_t;
+      flatData.sar_r = row.arus_r; flatData.sar_s = row.arus_s; flatData.sar_t = row.arus_t;
     }
-    if (row.catatan && row.catatan !== "-") listCatatan.push(`${row.jenis}: ${row.catatan}`);
+    if (row.catatan) listCatatan.push(`${row.jenis}: ${row.catatan}`);
   });
   flatData.catatan = listCatatan.join(" | ");
 
   try {
-    await fetch(scriptURL, { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+    await fetch(scriptURL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(flatData) 
     });
-    status.textContent = "✅ Data berhasil masuk ke Spreadsheet!";
-    showToast("✅ Berhasil Kirim Data Metering V2!");
-    
-    localStorage.removeItem('metering_local_backup');
+
+    status.textContent = "✅ Data terkirim ke Spreadsheet!";
+    showToast("✅ Berhasil Kirim Data V2!");
     savedReports = {}; tempInputs = {};
     document.getElementById('previewTitle').textContent = "✅ Data Berhasil Terkirim";
-    fotoPreview.classList.add("hidden"); downloadBtn.classList.add("hidden");
-    fotoStatus.textContent = "— belum ada foto"; fotoDriveURL = "";
+    fotoPreview.classList.add("hidden");
+    downloadBtn.classList.add("hidden");
+    fotoStatus.textContent = "— belum ada foto";
+    fotoDriveURL = "";
     renderOutput(); 
-  } catch {
-    status.textContent = "❌ Gagal kirim. Periksa koneksi internet.";
+  } catch (err) {
+    console.error(err);
+    status.textContent = "❌ Gagal kirim. Cek koneksi.";
+    showToast("❌ Gagal mengirim data.");
   } finally {
-    btnKirim.disabled = false; btnKirim.style.background = "#0056b3"; btnKirim.textContent = "📤 Kirim ke Spreadsheet Data Metering";
+    btnKirim.disabled = false; 
+    btnKirim.style.background = "#0056b3"; 
+    btnKirim.textContent = "📤 Kirim ke Spreadsheet Data Metering";
   }
 });
 
-/* --- TOMBOL PANDUAN PENGISIAN "?" --- */
+/* ---------- FIX TOMBOL PANDUAN "?" ---------- */
 const flowBtn = document.getElementById("flowBtn");
 const flowModal = document.getElementById("flowModal");
 const flowImg = document.getElementById("flowImg");
 const closeFlow = document.getElementById("closeFlow");
 
+// Gunakan link RAW Github agar gambar bisa tampil di <img> tag
+const flowImgURL = "https://raw.githubusercontent.com/nonarose/reportarus.v2.1/main/flowchart_form.svg";
+
 flowBtn.addEventListener("click", () => { 
-  flowImg.src = "https://raw.githubusercontent.com/nonarose/reportarus.v2.1/main/flowchart_form.svg"; 
-  flowModal.classList.remove("hidden"); flowModal.classList.add("show");      
+  flowImg.src = flowImgURL; 
+  flowModal.classList.remove("hidden"); // Hapus class hidden agar display:none !important hilang
+  flowModal.classList.add("show");      // Tambahkan class show untuk display:flex
 });
-closeFlow.addEventListener("click", () => { flowModal.classList.remove("show"); flowModal.classList.add("hidden"); });
-flowModal.addEventListener("click", (e) => { if(e.target===flowModal){ flowModal.classList.remove("show"); flowModal.classList.add("hidden"); } });
+
+closeFlow.addEventListener("click", () => { 
+  flowModal.classList.remove("show"); 
+  flowModal.classList.add("hidden");    // Kembalikan class hidden
+});
+
+flowModal.addEventListener("click", (e) => { 
+  if (e.target === flowModal) { 
+    flowModal.classList.remove("show"); 
+    flowModal.classList.add("hidden"); 
+  } 
+});
+
 </script>
 </body>
 </html>
